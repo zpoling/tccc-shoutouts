@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TCCC Shout-Outs</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      color: white;
+      background:
+        radial-gradient(circle at top right, #1565c0, transparent 55%),
+        linear-gradient(135deg, #061b46, #093984);
+    }
+
+    .screen {
+      height: 100%;
+      padding: 4vh 6vw;
+      display: flex;
+      flex-direction: column;
+      gap: 3vh;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .brand {
+      color: #ffd54a;
+      font-size: clamp(24px, 3.5vw, 68px);
+      font-weight: 900;
+      letter-spacing: 2px;
+    }
+
+    .school {
+      font-size: clamp(14px, 1.6vw, 30px);
+      text-align: right;
+    }
+
+    main {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      width: 100%;
+      max-height: 100%;
+      overflow: auto;
+      padding: 4vh 5vw;
+      border-radius: 28px;
+      background: #ffffff;
+      color: #102a50;
+      border-top: 10px solid #ffd54a;
+      box-shadow: 0 18px 55px #00000035;
+    }
+
+    .label {
+      color: #456180;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      font-size: clamp(13px, 1.3vw, 24px);
+      font-weight: bold;
+    }
+
+    h1 {
+      margin: 1.5vh 0 2vh;
+      color: #093984;
+      font-size: clamp(26px, 4vw, 76px);
+      line-height: 1.1;
+      overflow-wrap: anywhere;
+    }
+
+    .message {
+      margin: 0;
+      font-size: clamp(20px, 2.6vw, 50px);
+      line-height: 1.35;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .credit {
+      margin-top: 3vh;
+      color: #456180;
+      font-size: clamp(15px, 1.6vw, 30px);
+    }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      font-size: clamp(13px, 1.4vw, 26px);
+      color: #e1ebff;
+    }
+
+    .enter { animation: enter 0.6s ease-out; }
+
+    @keyframes enter {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .enter { animation: none; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="screen">
+    <header>
+      <div class="brand">SHOUT-OUT</div>
+      <div class="school">Tri-County Career Center</div>
+    </header>
+
+    <main>
+      <section class="card" id="card">
+        <div class="label" id="label">Thunderhawk recognition</div>
+        <h1 id="name">TCCC Shout-Outs</h1>
+        <p class="message" id="message">Loading shout-outs…</p>
+        <div class="credit" id="credit"></div>
+      </section>
+    </main>
+
+    <footer>
+      <span>A little recognition goes a long way.</span>
+      <span id="counter"></span>
+    </footer>
+  </div>
+
+  <script>
+    const SCRIPT_URL = "PASTE_YOUR_WEB_APP_EXEC_URL_HERE";
+
+    let shoutouts = [];
+    let currentIndex = 0;
+    let requestNumber = 0;
+
+    const card = document.getElementById("card");
+    const nameBox = document.getElementById("name");
+    const messageBox = document.getElementById("message");
+    const creditBox = document.getElementById("credit");
+    const counterBox = document.getElementById("counter");
+
+    function animateCard() {
+      card.classList.remove("enter");
+      void card.offsetWidth;
+      card.classList.add("enter");
+      card.scrollTop = 0;
+    }
+
+    function showNotice(message) {
+      nameBox.textContent = "TCCC Shout-Outs";
+      messageBox.textContent = message;
+      creditBox.textContent = "";
+      counterBox.textContent = "";
+      animateCard();
+    }
+
+    function showShoutout() {
+      if (!shoutouts.length) {
+        showNotice("Who made your day? Give them a shout-out!");
+        return;
+      }
+
+      currentIndex = currentIndex % shoutouts.length;
+      const item = shoutouts[currentIndex];
+
+      nameBox.textContent = item.name;
+      messageBox.textContent = item.message;
+      creditBox.textContent = item.credit ? "From: " + item.credit : "";
+      counterBox.textContent = (currentIndex + 1) + " / " + shoutouts.length;
+
+      animateCard();
+    }
+
+    async function refreshShoutouts() {
+      const thisRequest = ++requestNumber;
+      const controller = new AbortController();
+      const timeout = setTimeout(function () {
+        controller.abort();
+      }, 30000);
+
+      try {
+        const url = SCRIPT_URL + "?t=" + Date.now();
+        const response = await fetch(url, { signal: controller.signal });
+
+        clearTimeout(timeout);
+        if (thisRequest !== requestNumber) return;
+
+        if (!response.ok) {
+          throw new Error("HTTP " + response.status);
+        }
+
+        const items = await response.json();
+        const nextItems = Array.isArray(items) ? items : [];
+        const changed = JSON.stringify(nextItems) !== JSON.stringify(shoutouts);
+
+        shoutouts = nextItems;
+
+        if (changed || !shoutouts.length) {
+          currentIndex = 0;
+          showShoutout();
+        }
+      } catch (err) {
+        clearTimeout(timeout);
+        if (thisRequest !== requestNumber) return;
+
+        shoutouts = [];
+        showNotice("Our shout-outs will be back shortly.");
+      }
+    }
+
+    setInterval(function () {
+      if (shoutouts.length > 1) {
+        currentIndex++;
+        showShoutout();
+      }
+    }, 12000);
+
+    setInterval(refreshShoutouts, 60000);
+    refreshShoutouts();
+  </script>
+</body>
+</html>
