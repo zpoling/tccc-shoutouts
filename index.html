@@ -192,7 +192,7 @@
       }, 30000);
 
       try {
-        const url = SCRIPT_URL + "?t=" + Date.now();
+        const url = SCRIPT_URL + "?json=1&t=" + Date.now();
         const response = await fetch(url, { signal: controller.signal });
 
         clearTimeout(timeout);
